@@ -1,86 +1,87 @@
+import sqlite3
 import numpy as np
 import pandas as pd
-import sqlite3
 
-
-# Represents a single student, with an in-memory list of grades
 class student:
-    def __init__(self, name, roll_number):
+    def __init__(self, name, roll_number, grade):
         self.name = name
         self.roll_number = roll_number
-        self._grades = []  # starts empty, since a new student has no grades yet
+        self.grade = grade  # Stores the single grade directly
 
-    # Adds one grade to this student's grade list
-    def add_grade(self, grade):
-        self._grades.append(grade)
-
-    # Calculates the average of this student's grades, safely handling no grades yet
-    def get_average(self):
-        if len(self._grades) == 0:
-            return 0
-        else:
-            return sum(self._grades) / len(self._grades)
-
-
-# Connect to the database (creates the file if it doesn't exist yet)
+# Database Setup
 conn = sqlite3.connect("students.db")
 cursor = conn.cursor()
-
-# Create the students table if it doesn't already exist
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS student (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-name TEXT,
-roll_number INTEGER,
-avg_grade REAL
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    roll_number INTEGER,
+    avg_grade REAL
 )
 ''')
-
 conn.commit()
 
-
-# Adds a new student to the database, with no average grade yet
-def add_student(name, roll_number):
-    cursor.execute(
-        "INSERT INTO student (name, roll_number, avg_grade) VALUES (?, ?, ?)",
-        (name, roll_number, None)
-    )
+def add_student(name, roll_number, grade):
+    cursor.execute("INSERT INTO student (name, roll_number, avg_grade) VALUES (?, ?, ?)", (name, roll_number, grade))
     conn.commit()
 
+def show_analytics():
+    df = pd.read_sql_query("SELECT * FROM student", conn)
+    if df.empty or df["avg_grade"].isnull().all():
+        print("📭 Database is empty or no grades recorded yet.")
+        return
+        
+    print("\n" + "="*10 + " CLASS PERFORMANCE REPORT " + "="*10)
+    print("Class average:", df["avg_grade"].mean())
+    
+    top = df.loc[df["avg_grade"].idxmax()]
+    print(f"🏆 Top Scorer: {top['name']} ({top['avg_grade']})")
+    
+    passing = df[df["avg_grade"] >= 50]
+    failing = df[df["avg_grade"] < 50]
+    print("✅ Passed:", len(passing))
+    print("❌ Failed:", len(failing))
+    
+    # NumPy calculations on the grades
+    grades_array = np.array(df["avg_grade"].dropna())
+    print("Mean (numpy):", grades_array.mean())
+    print("Std deviation (numpy):", grades_array.std())
+    
+    # Lambda sorting (highest to lowest)
+    students_list = list(zip(df["name"], df["avg_grade"]))
+    sorted_list = sorted(students_list, key=lambda x: x[1], reverse=True)
+    print("\n📋 Leaderboard:")
+    for s in sorted_list:
+        print(f" - {s[0]}: {s[1]}")
 
-# Updates a student's average grade in the database, found by their roll number
-def update_average(roll_number, avg_grade):
-    cursor.execute(
-        "UPDATE student SET avg_grade = ? WHERE roll_number = ?",
-        (avg_grade, roll_number)
-    )
-    conn.commit()
-
-
-# --- Demonstration: OOP class usage ---
-
-s1 = student("Ali", 101)
-s1.add_grade(85)
-s1.add_grade(90)
-print(s1.name, "-", s1._grades, "- average:", s1.get_average())
-
-
-# --- Demonstration: database + pandas analysis ---
-
-# Clear old data so this demo always runs cleanly
-cursor.execute("DELETE FROM student")
-conn.commit()
-
-add_student("Shahid", 103)
-add_student("Mahnoor", 104)
-update_average(103, 45)
-update_average(104, 50)
-
-# Load all students into a DataFrame for analysis
-df = pd.read_sql_query("SELECT * FROM student", conn)
-print(df)
-
-# Class average
+# --- THE INTERACTIVE MENU LOOP ---
+while True:
+    print("\n=== STUDENT GRADE SYSTEM ===")
+    print("1. Register Student & Grade")
+    print("2. View Class Analytics & Leaderboard")
+    print("3. Exit")
+    
+    choice = input("\nChoose an option (1-3): ").strip()
+    
+    if choice == "1":
+        s_name = input("Enter student name: ").strip()
+        s_roll = int(input("Enter roll number: "))
+        s_grade = float(input("Enter student's grade: ")) # Just asks once!
+        
+        # Creates the student object using your OOP design
+        temp_student = student(s_name, s_roll, s_grade)
+        
+        # Save directly to database
+        add_student(temp_student.name, temp_student.roll_number, temp_student.grade)
+        print(f"✅ Saved {temp_student.name} with a grade of {temp_student.grade}")
+        
+    elif choice == "2":
+        show_analytics()
+    elif choice == "3":
+        print("Goodbye!")
+        break
+    else:
+        print("❌ Invalid option.")
 print("Class average:", df["avg_grade"].mean())
 
 # Top scorer
