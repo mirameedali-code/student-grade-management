@@ -20,19 +20,15 @@ A Python + SQLite application for managing students and their grades, with stati
 2. Run all cells
 3. The demonstration section shows adding students, updating grades, and viewing full statistics
 
-## 📈 Example Output & Statistical Analytics
+## 🕹️ Student Registry Menu
 
-Running the application calculates classroom statistics using NumPy and pandas, generating the following dashboard layout:
+The application loads directly into an interactive classroom management command loop:
 
 ```text
-======================================
-     CLASS PERFORMANCE REPORT         
-======================================
- 🏆 Top Scorer:    Mahnoor (50.00)
- 📊 Class Average: 47.50
---------------------------------------
- STATUS BREAKDOWN:
-  ✅ Passed:       1 student(s)
-  ❌ Failed:       1 student(s)
-======================================
+=== STUDENT GRADE SYSTEM ===
+1. Register Student & Grade
+2. View Class Analytics & Leaderboard
+3. Exit
+
+Choose an option (1-3): 
 ```
